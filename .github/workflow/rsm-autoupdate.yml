@@ -1,0 +1,93 @@
+name: Update RSM Formula
+
+on:
+  schedule:
+    # Check for updates once every month
+    - cron: '0 0 1 * *'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  update-formula:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Get latest RSM release
+        id: latest_release
+        run: |
+          # Fetch latest release info from GitLab API
+          LATEST=$(curl -s "https://gitlab.com/api/v4/projects/19886891/releases" | jq -r '.[0].tag_name')
+          echo "Latest release: $LATEST"
+          echo "tag=$LATEST" >> $GITHUB_OUTPUT
+          
+          # Get current version from formula
+          CURRENT=$(grep -oP 'rsm-v\K[0-9.]+' Formula/rsm.rb | head -1)
+          echo "Current version: $CURRENT"
+          echo "current=$CURRENT" >> $GITHUB_OUTPUT
+          
+          # Check if update needed
+          if [ "$LATEST" != "v$CURRENT" ]; then
+            echo "needs_update=true" >> $GITHUB_OUTPUT
+          else
+            echo "needs_update=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Download and calculate SHA256
+        if: steps.latest_release.outputs.needs_update == 'true'
+        id: calculate_sha
+        run: |
+          TAG=${{ steps.latest_release.outputs.tag }}
+          URL="https://gitlab.com/Reference-Standard-M/rsm/-/archive/${TAG}/rsm-${TAG}.tar.gz"
+          
+          echo "Downloading $URL"
+          SHA256=$(curl -sL "$URL" | shasum -a 256 | awk '{print $1}')
+          echo "SHA256: $SHA256"
+          echo "sha256=$SHA256" >> $GITHUB_OUTPUT
+          echo "url=$URL" >> $GITHUB_OUTPUT
+      
+      - name: Update formula
+        if: steps.latest_release.outputs.needs_update == 'true'
+        run: |
+          TAG=${{ steps.latest_release.outputs.tag }}
+          SHA256=${{ steps.calculate_sha.outputs.sha256 }}
+          URL=${{ steps.calculate_sha.outputs.url }}
+          
+          # Update the URL line
+          sed -i "s|url \".*\"|url \"$URL\"|" Formula/rsm.rb
+          
+          # Update the SHA256 line
+          sed -i "s|sha256 \".*\"|sha256 \"$SHA256\"|" Formula/rsm.rb
+          
+          echo "Formula updated to $TAG"
+      
+      - name: Create Pull Request
+        if: steps.latest_release.outputs.needs_update == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "Update RSM formula to ${{ steps.latest_release.outputs.tag }}"
+          title: "Update RSM to ${{ steps.latest_release.outputs.tag }}"
+          body: |
+            ## Automated Formula Update
+            
+            This PR updates the RSM formula to version `${{ steps.latest_release.outputs.tag }}`.
+            
+            ### Changes
+            - **Version**: ${{ steps.latest_release.outputs.tag }}
+            - **URL**: ${{ steps.calculate_sha.outputs.url }}
+            - **SHA256**: `${{ steps.calculate_sha.outputs.sha256 }}`
+            
+            ### Release Notes
+            View the release notes at: https://gitlab.com/Reference-Standard-M/rsm/-/releases/${{ steps.latest_release.outputs.tag }}
+            
+            ---
+            *This PR was automatically created by the Update RSM Formula workflow.*
+          branch: update-rsm-${{ steps.latest_release.outputs.tag }}
+          delete-branch: true
+          labels: |
+            automated
+            formula-update
