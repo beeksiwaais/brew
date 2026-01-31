@@ -23,9 +23,8 @@ class Webcopy < Formula
   end
 
   def install
-    bin.install "webcopy-darwin-arm64" => "webcopy" if Hardware::CPU.arm? && OS.mac?
-    bin.install "webcopy-darwin-amd64" => "webcopy" if Hardware::CPU.intel? && OS.mac?
-    bin.install "webcopy-linux-amd64" => "webcopy" if OS.linux?
+    bin.install "webcopy"
+    man1.install "webcopy.1"
   end
 
   test do
