@@ -28,6 +28,7 @@ jobs:
       - name: Update formula
         run: |
           VERSION="${{ github.event.inputs.version }}"
+          VERSION_NUM="${VERSION#v}"
           SHA256_DARWIN_ARM64="${{ github.event.inputs.sha256_darwin_arm64 }}"
           SHA256_DARWIN_AMD64="${{ github.event.inputs.sha256_darwin_amd64 }}"
           SHA256_LINUX_AMD64="${{ github.event.inputs.sha256_linux_amd64 }}"
@@ -37,23 +38,23 @@ jobs:
           class Webcopy < Formula
             desc "CLI tool to archive website HTML pages and assets for offline reading"
             homepage "https://github.com/beeksiwaais/httpcopy"
-            version "VERSION_PLACEHOLDER"
+            version "VERSION_NUM_PLACEHOLDER"
             license "MIT"
 
             on_macos do
               on_arm do
-                url "BASE_URL_PLACEHOLDER/VERSION_PLACEHOLDER/webcopy-darwin-arm64.tar.gz"
+                url "BASE_URL_PLACEHOLDER/VERSION_TAG_PLACEHOLDER/webcopy-darwin-arm64.tar.gz"
                 sha256 "SHA256_DARWIN_ARM64_PLACEHOLDER"
               end
               on_intel do
-                url "BASE_URL_PLACEHOLDER/VERSION_PLACEHOLDER/webcopy-darwin-amd64.tar.gz"
+                url "BASE_URL_PLACEHOLDER/VERSION_TAG_PLACEHOLDER/webcopy-darwin-amd64.tar.gz"
                 sha256 "SHA256_DARWIN_AMD64_PLACEHOLDER"
               end
             end
 
             on_linux do
               on_intel do
-                url "BASE_URL_PLACEHOLDER/VERSION_PLACEHOLDER/webcopy-linux-amd64.tar.gz"
+                url "BASE_URL_PLACEHOLDER/VERSION_TAG_PLACEHOLDER/webcopy-linux-amd64.tar.gz"
                 sha256 "SHA256_LINUX_AMD64_PLACEHOLDER"
               end
             end
@@ -70,7 +71,8 @@ jobs:
           FORMULA
 
           # Replace placeholders
-          sed -i "s|VERSION_PLACEHOLDER|${VERSION#v}|g" Formula/webcopy.rb
+          sed -i "s|VERSION_NUM_PLACEHOLDER|${VERSION_NUM}|g" Formula/webcopy.rb
+          sed -i "s|VERSION_TAG_PLACEHOLDER|${VERSION}|g" Formula/webcopy.rb
           sed -i "s|BASE_URL_PLACEHOLDER|${BASE_URL}|g" Formula/webcopy.rb
           sed -i "s|SHA256_DARWIN_ARM64_PLACEHOLDER|${SHA256_DARWIN_ARM64}|g" Formula/webcopy.rb
           sed -i "s|SHA256_DARWIN_AMD64_PLACEHOLDER|${SHA256_DARWIN_AMD64}|g" Formula/webcopy.rb
